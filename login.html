@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Board Login</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0e0f11; color: #e8e9eb;
+    font-family: 'Syne', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+  }
+  .container {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 16px; padding: 40px 24px; width: 100%; max-width: 340px;
+  }
+  .logo {
+    width: 64px; height: 64px; background: #4f8ef7; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500;
+    color: #fff; letter-spacing: -1px;
+  }
+  h2 { font-size: 18px; font-weight: 600; color: #e8e9eb; text-align: center; }
+  p  { font-size: 12px; color: #55585f; font-family: 'DM Mono', monospace; text-align: center; }
+  input {
+    width: 100%; background: #1e2023; border: 1px solid #343739;
+    border-radius: 6px; padding: 12px 16px; color: #e8e9eb;
+    font-family: 'DM Mono', monospace; font-size: 16px;
+    text-align: center; letter-spacing: 4px; outline: none;
+    transition: border-color .15s;
+  }
+  input:focus { border-color: #4f8ef7; }
+  button {
+    width: 100%; padding: 12px; border-radius: 6px; border: none;
+    background: #4f8ef7; color: #fff; font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  button:hover    { background: #2d6be4; }
+  button:disabled { opacity: .6; pointer-events: none; }
+  #error {
+    display: none; color: #e05a5a; font-size: 12px;
+    font-family: 'DM Mono', monospace; text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo" id="login-logo">AT</div>
+  <h2 id="login-title">Group Task Board</h2>
+  <p>Enter your group PIN to access the board</p>
+  <input type="password" id="pin" placeholder="&#9679;&#9679;&#9679;&#9679;" maxlength="20"
+    onkeydown="if(event.key==='Enter')verify()">
+  <button id="btn" onclick="verify()">Unlock Board</button>
+  <div id="error">Incorrect PIN — check with your group</div>
+</div>
+<script>
+  function verify() {
+    var pin = document.getElementById('pin').value;
+    var btn = document.getElementById('btn');
+    if (!pin) return;
+    btn.textContent = 'Verifying...'; btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(function (url) {
+        if (url) {
+          window.top.location.href = url;
+        } else {
+          document.getElementById('error').style.display = 'block';
+          btn.textContent = 'Unlock Board'; btn.disabled = false;
+          document.getElementById('pin').value = '';
+          document.getElementById('pin').focus();
+        }
+      })
+      .withFailureHandler(function (err) {
+        btn.textContent = 'Unlock Board'; btn.disabled = false;
+        alert('Network error: ' + err.message);
+      })
+      .getAuthUrl(pin);
+  }
+</script>
+</body>
+</html>

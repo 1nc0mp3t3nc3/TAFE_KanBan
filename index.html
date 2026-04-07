@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Board</title>
+<?!= include('styles.css'); ?>
+<?!= include('config.js'); ?>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark" id="logo-mark"></div>
+    <div>
+      <div class="header-title" id="header-title"></div>
+      <div class="header-sub"   id="header-sub"></div>
+    </div>
+  </div>
+  <div class="header-meta" id="header-meta"></div>
+</div>
+
+<!-- ── DEADLINE BANNER ─────────────────────────────────────── -->
+<div class="deadline-banner">
+  <span class="deadline-label">Deadlines</span>
+  <div id="deadline-chips" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1"></div>
+  <button class="add-deadline-btn" onclick="openAddDeadline()">+ Add deadline</button>
+</div>
+
+<!-- ── TAB NAV ─────────────────────────────────────────────── -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('board',   this)">Task board</button>
+  <button class="tab-btn"        onclick="switchTab('docs',    this)">Submissions</button>
+  <button class="tab-btn"        onclick="switchTab('notes',   this)">Meeting notes</button>
+  <button class="tab-btn"        onclick="switchTab('report',  this)">Report</button>
+  <button class="tab-btn"        onclick="switchTab('sources', this)">Sources</button>
+  <button class="tab-btn"        onclick="switchTab('audit',   this)">Audit log</button>
+  <button class="tab-btn" id="tab-btn-search" onclick="switchTab('search', this)">Research</button>
+</div>
+
+<!-- ── TASK BOARD TAB ──────────────────────────────────────── -->
+<div id="tab-board" class="tab-panel active">
+  <div class="toolbar">
+    <span class="toolbar-label">Filter:</span>
+    <div id="filter-btns" style="display:contents">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn"        onclick="setFilter('Unassigned',this)">Unassigned</button>
+      <button class="filter-btn"        onclick="setFilter('High',this)">High priority</button>
+    </div>
+    <button class="add-btn" onclick="openAddModal()">+ Add task</button>
+    <button class="add-btn" id="seed-btn" onclick="seedSectionTasks()"
+      style="background:rgba(100,181,246,.12);border-color:#1565c0;color:#64b5f6;"
+      title="Auto-create one task per report section">Seed section tasks</button>
+    <button class="add-btn" id="sync-btn" onclick="syncReviewCards()"
+      style="background:rgba(76,175,118,.12);border-color:#3B6D11;color:#4caf76;"
+      title="Scan submissions folder and auto-create review tasks">Sync review tasks</button>
+  </div>
+  <div id="board-container">
+    <div class="loading"><div class="spinner"></div> Loading tasks...</div>
+  </div>
+  <div class="wc-bar">
+    <span class="wc-label">Word targets:</span>
+    <div class="wc-sections" id="wc-chips"></div>
+    <span class="wc-total" id="wc-total-label"></span>
+  </div>
+  <div class="progress-bar-wrap">
+    <span class="progress-label">Task progress</span>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <span class="progress-pct"    id="progress-pct">0%</span>
+    <span class="progress-counts" id="progress-counts">0 / 0 done</span>
+  </div>
+</div>
+
+<!-- ── SUBMISSIONS TAB ─────────────────────────────────────── -->
+<div id="tab-docs" class="tab-panel">
+  <div class="docs-wrap">
+    <div class="docs-header">
+      <div>
+        <div class="docs-title">Submissions</div>
+        <div class="docs-sub">Files uploaded by group members to the shared Drive folder</div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px;">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;">Uploading your submission</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;font-family:'DM Mono',monospace;">
+          1. Click <strong style="color:var(--text)">Upload to Drive</strong> to open the shared folder<br>
+          2. Name your file ending in your initials e.g. <span id="upload-example" style="color:var(--accent)">Project_Submission_XX.pdf</span><br>
+          3. Add yourself to the <strong style="color:var(--text)">Group members</strong> table below
+        </div>
+      </div>
+      <a id="upload-link" href="#" target="_blank"
+        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:5px;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:12px;font-weight:500;text-decoration:none;white-space:nowrap;flex-shrink:0;"
+        onmouseover="this.style.background='#2d6be4'" onmouseout="this.style.background='var(--accent)'">
+        Upload to Drive
+      </a>
+    </div>
+    <div id="docs-container">
+      <div class="docs-loading"><div class="spinner"></div> Loading documents...</div>
+    </div>
+    <div class="members-section">
+      <div class="members-header"><span class="members-title">Group member initials</span></div>
+      <table class="members-table">
+        <thead><tr><th>Initials</th><th>Name</th><th></th></tr></thead>
+        <tbody id="members-body">
+          <tr><td colspan="3" style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px;padding:12px 10px">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div class="add-member-row">
+        <input type="text" class="initials-input" id="new-initials" placeholder="e.g. AB" maxlength="4">
+        <input type="text" class="name-input"     id="new-name"     placeholder="e.g. Alex Brown">
+        <button class="btn-add-member" onclick="addMember()">+ Add member</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MEETING NOTES TAB ───────────────────────────────────── -->
+<div id="tab-notes" class="tab-panel">
+  <div class="notes-wrap">
+    <div class="notes-header">
+      <div>
+        <div class="notes-title">Meeting notes &amp; Scheduling</div>
+        <div class="notes-sub">Coordinate syncs and track running group decisions</div>
+      </div>
+      <button class="add-note-btn" onclick="openNoteModal()">+ Add meeting note</button>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">Schedule a Google Meet</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:1;min-width:140px;">
+          <label style="display:block;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Title</label>
+          <input type="text" id="meet-title" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--text);font-size:12px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Date</label>
+          <input type="date" id="meet-date" style="background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Start</label>
+          <input type="time" id="meet-start" value="18:00" style="background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">End</label>
+          <input type="time" id="meet-end" value="19:00" style="background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Timezone</label>
+          <select id="meet-tz" style="background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+            <option value="Australia/Brisbane">Brisbane (AEST)</option>
+            <option value="Australia/Sydney">Sydney/Melbourne (AEST/AEDT)</option>
+            <option value="Australia/Adelaide">Adelaide (ACST/ACDT)</option>
+            <option value="Australia/Perth">Perth (AWST)</option>
+          </select>
+        </div>
+        <button onclick="generateMeetLink()" style="padding:7px 16px;background:var(--accent);color:white;border:none;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;height:30px;">Add to Calendar</button>
+      </div>
+    </div>
+    <div id="notes-container">
+      <div class="docs-loading"><div class="spinner"></div> Loading notes...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REPORT TAB ───────────────────────────────────────────── -->
+<div id="tab-report" class="tab-panel">
+  <div class="at3-wrap">
+    <div class="at3-header">
+      <div>
+        <div class="at3-title">Report sections</div>
+        <div class="at3-sub">Collaborative Google Docs — open to edit, compile to export</div>
+      </div>
+      <div class="at3-actions">
+        <button class="add-btn" id="seed-docs-btn" onclick="triggerSeedDocs()"
+          style="background:rgba(76,175,118,.12);border-color:#3B6D11;color:#4caf76;"
+          title="Create Google Doc placeholders in Drive for each section">Seed report docs</button>
+        <button class="add-btn" id="refresh-wc-btn" onclick="loadReportSections()"
+          style="background:rgba(79,142,247,.12);border-color:#1565c0;color:#4f8ef7;"
+          title="Sync live word counts from Drive docs">Sync word counts</button>
+        <a id="docs-folder-link" href="#" target="_blank" class="open-doc-btn" style="text-decoration:none">Open docs folder</a>
+      </div>
+    </div>
+    <div class="at3-progress-wrap">
+      <div class="at3-progress-header">
+        <span class="at3-progress-title">Word count progress</span>
+        <span class="at3-progress-total" id="at3-total-wc">0 / 0 words</span>
+      </div>
+      <div class="at3-track"><div class="at3-fill" id="at3-fill" style="width:0%"></div></div>
+      <div class="at3-section-bars" id="at3-section-bars"></div>
+    </div>
+    <div class="section-list" id="at3-section-list">
+      <div class="docs-loading"><div class="spinner"></div> Loading sections...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SOURCES TAB ─────────────────────────────────────────── -->
+<div id="tab-sources" class="tab-panel">
+  <div class="sources-wrap">
+    <div class="sources-header">
+      <div>
+        <div class="sources-title">Sources</div>
+        <div class="sources-sub">Shared reference log — academic and industry sources</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="citation-format" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:6px 10px;color:var(--text2);font-size:12px;font-family:'DM Mono',monospace;outline:none;">
+          <option value="harvard">Harvard</option>
+          <option value="apa">APA 7th</option>
+          <option value="ieee">IEEE</option>
+          <option value="chicago">Chicago</option>
+          <option value="plain">Plain (manual)</option>
+        </select>
+        <button class="compile-btn" id="push-refs-btn" onclick="pushReferencesToDoc()">Push to References doc</button>
+        <button class="add-source-btn" onclick="openSourceModal()">+ Add source</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="quick-url-input"
+        style="flex:1;min-width:260px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:7px 12px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none;"
+        placeholder="Paste a URL or DOI to auto-fill source details..."
+        onkeydown="if(event.key==='Enter')quickAddSource()">
+      <button id="quick-fetch-btn" onclick="quickAddSource()"
+        style="padding:7px 14px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;white-space:nowrap;">
+        Fetch metadata
+      </button>
+    </div>
+    <div class="sources-filter-row">
+      <span class="sources-filter-label">Filter:</span>
+      <button class="src-filter-btn active" onclick="filterSources('all',this)">All</button>
+      <div id="src-section-filters" style="display:contents"></div>
+      <button class="src-filter-btn" onclick="filterSources('journal',this)">Journals only</button>
+      <span class="sources-count" id="src-count">0 sources</span>
+    </div>
+    <div class="sources-table-wrap">
+      <div id="sources-container"><div class="sources-empty">Loading sources...</div></div>
+    </div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:500;color:var(--text2);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;">Reference Scanner</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;">Enter a Google Doc ID or doc_XX tag to scan for a References header.</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="scan-doc-id" placeholder="Google Doc ID or doc_XX tag"
+          style="flex:1;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;">
+        <button onclick="triggerScanner()"
+          style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">
+          Scan
+        </button>
+      </div>
+      <div id="scan-results" style="margin-top:12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AUDIT LOG TAB ───────────────────────────────────────── -->
+<div id="tab-audit" class="tab-panel">
+  <div class="audit-wrap">
+    <div class="audit-header">
+      <div>
+        <div class="audit-title">Audit log</div>
+        <div class="audit-sub">Full accountability trail — who changed what and when</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="audit-filter-input"
+          style="background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none;width:220px;"
+          placeholder="Filter by item, editor, or action..."
+          oninput="filterAuditLog(this.value)">
+        <button onclick="loadAuditLog()"
+          style="padding:6px 14px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;">
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div id="audit-container">
+      <div class="docs-loading"><div class="spinner"></div> Loading audit log...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESEARCH TAB ────────────────────────────────────────── -->
+<div id="tab-search" class="tab-panel">
+  <div class="search-wrap">
+    <div class="search-header">
+      <div class="search-title">Research</div>
+      <div class="search-sub">Pre-built queries — click to load, then open in Google or Scholar</div>
+    </div>
+    <div id="dork-container"></div>
+    <div class="search-input-row">
+      <input type="text" class="search-input" id="search-query"
+        placeholder="Edit or type your search query..."
+        onkeydown="if(event.key==='Enter')runSearch()">
+      <div class="engine-toggle">
+        <button class="engine-btn active" id="eng-google"  onclick="setEngine('google')">Google</button>
+        <button class="engine-btn"        id="eng-scholar" onclick="setEngine('scholar')">Scholar</button>
+      </div>
+      <button class="search-go" onclick="runSearch()">Open in new tab</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ══════════════════════════════════════════════════ -->
+
+<!-- Add Source -->
+<div class="src-modal-overlay" id="srcModal">
+  <div class="src-modal">
+    <h3 id="src-modal-title">Add source</h3>
+    <input type="hidden" id="src-edit-id" value="">
+    <div class="field"><label>Title</label><input type="text" id="src-title" placeholder="Full title of the source"></div>
+    <div class="field"><label>Author/s</label><input type="text" id="src-authors" placeholder="e.g. Smith, J. and Jones, A."></div>
+    <div class="field"><label>Year</label><input type="text" id="src-year" placeholder="e.g. 2026" style="width:120px"></div>
+    <div class="field">
+      <label>Source type</label>
+      <select id="src-type">
+        <option value="journal">Journal article</option>
+        <option value="standard">Industry standard</option>
+        <option value="legislation">Legislation</option>
+        <option value="report">Government / industry report</option>
+        <option value="web">Web source</option>
+        <option value="book">Book / textbook</option>
+        <option value="conference">Conference paper</option>
+      </select>
+    </div>
+    <div class="field"><label>URL or DOI</label><input type="text" id="src-url" placeholder="https:// or doi:..."></div>
+    <div class="field"><label>Relevant section</label><select id="src-section-select"></select></div>
+    <div class="field"><label>Notes on relevance</label><textarea id="src-notes" placeholder="Why is this source useful?" style="min-height:80px"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeSrcModal()">Cancel</button>
+      <button class="btn-save" id="src-save-btn" onclick="saveSource()">Add source</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Meeting Note -->
+<div class="note-modal-overlay" id="noteModal">
+  <div class="note-modal">
+    <h3>Add meeting note</h3>
+    <div class="field"><label>Meeting title</label><input type="text" id="n-title" placeholder="e.g. Week 3 check-in"></div>
+    <div class="field"><label>Authored by</label><select id="n-author"><option value="Unassigned">Unassigned</option></select></div>
+    <div class="field"><label>Date</label><input type="text" id="n-date" placeholder="e.g. 1 Apr 2026"></div>
+    <div class="field">
+      <label>Notes</label>
+      <div id="n-body-toolbar"></div>
+      <textarea id="n-body" placeholder="Decisions made, action items, who owns what..." style="min-height:120px;border-radius:0 0 4px 4px;border-top:none"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeNoteModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveNote()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>Add task</h3>
+    <div class="field"><label>Title</label><input type="text" id="f-title" placeholder="Task description"></div>
+    <div class="field"><label>Section</label><select id="f-section"></select></div>
+    <div class="field"><label>Owner</label><select id="f-owner"><option value="Unassigned">Unassigned</option></select></div>
+    <div class="field"><label>Due</label><input type="text" id="f-due" placeholder="e.g. 15/05/2026"></div>
+    <div class="field">
+      <label>Priority</label>
+      <select id="f-priority"><option>High</option><option selected>Medium</option><option>Low</option></select>
+    </div>
+    <div class="field"><label>Word target</label><input type="text" id="f-words" placeholder="e.g. 500"></div>
+    <div class="field">
+      <label>Notes</label>
+      <div id="f-notes-toolbar"></div>
+      <textarea id="f-notes" placeholder="Any context for the group..." style="border-radius:0 0 4px 4px;border-top:none"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveTask()">Add task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Task -->
+<div class="modal-overlay" id="editTaskModal">
+  <div class="modal">
+    <h3>Edit task</h3>
+    <input type="hidden" id="e-task-id">
+    <div class="field"><label>Title</label><input type="text" id="e-title" placeholder="Task description"></div>
+    <div class="field"><label>Section</label><select id="e-section"></select></div>
+    <div class="field"><label>Owner</label><select id="e-owner"><option value="Unassigned">Unassigned</option></select></div>
+    <div class="field"><label>Due</label><input type="text" id="e-due" placeholder="e.g. 15/05/2026"></div>
+    <div class="field">
+      <label>Priority</label>
+      <select id="e-priority"><option>High</option><option>Medium</option><option>Low</option></select>
+    </div>
+    <div class="field"><label>Word target</label><input type="text" id="e-words" placeholder="e.g. 500"></div>
+    <div class="field">
+      <label>Notes</label>
+      <div id="e-notes-toolbar"></div>
+      <textarea id="e-notes" placeholder="Any context for the group..." style="min-height:100px;border-radius:0 0 4px 4px;border-top:none"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-save" id="e-save-btn" onclick="saveEditModal()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Task Notes -->
+<div class="modal-overlay" id="viewNoteModal">
+  <div class="modal">
+    <h3 id="vn-title"></h3>
+    <div id="vn-content"></div>
+    <div class="modal-btns" id="vn-btns"></div>
+  </div>
+</div>
+
+<?!= include('app.js'); ?>
+
+<script>
+// ============================================================
+// BOOT — runs once on page load, pulls all strings from config
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+  var cfg = CLIENT_CONFIG;
+
+  // Header identity
+  document.getElementById('logo-mark').textContent    = cfg.logoText       || 'AT';
+  document.getElementById('header-title').textContent = cfg.projectName    || 'Task Board';
+  document.getElementById('header-sub').textContent   = (cfg.projectSubtitle || '') + ' — Group Task Board';
+
+  // Header chips
+  document.getElementById('header-meta').innerHTML = (cfg.headerChips || []).map(function (c) {
+    return '<div class="meta-chip' + (c.accent ? ' accent' : '') + '">' + c.label + '</div>';
+  }).join('');
+
+  // Upload example filename
+  var ex = document.getElementById('upload-example');
+  if (ex) ex.textContent = (cfg.projectName || 'Project').replace(/\s+/g, '_') + '_XX.pdf';
+
+  // Drive folder links
+  var ul = document.getElementById('upload-link');
+  if (ul) ul.href = cfg.submissionsFolderUrl || '#';
+  var dl = document.getElementById('docs-folder-link');
+  if (dl) dl.href = cfg.documentsFolderUrl || '#';
+
+  // Meet scheduler default title
+  var mt = document.getElementById('meet-title');
+  if (mt) mt.value = (cfg.projectName || 'Group') + ' Sync';
+
+  // Word count chips on board tab
+  document.getElementById('wc-chips').innerHTML = (cfg.sections || [])
+    .filter(function (s) { return s.target > 0; })
+    .map(function (s) { return '<span class="wc-chip">' + s.name + ' ~' + s.target + '</span>'; })
+    .join('');
+  document.getElementById('wc-total-label').textContent = 'Total: ' + (cfg.reportWordTarget || 0) + ' words';
+
+  // Section dropdowns (Add Task + Edit Task modals)
+  var secOpts = (cfg.sections || []).map(function (s) {
+    return '<option value="' + s.name + '">' + s.name + '</option>';
+  }).join('');
+  ['f-section', 'e-section'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = secOpts;
+  });
+
+  // Source section select
+  var srcSel = document.getElementById('src-section-select');
+  if (srcSel) srcSel.innerHTML = secOpts + '<option value="General">General</option>';
+
+  // Source section filter buttons
+  var srcFilters = document.getElementById('src-section-filters');
+  if (srcFilters) {
+    srcFilters.innerHTML = (cfg.sections || [])
+      .filter(function (s) { return s.target > 0; })
+      .map(function (s) {
+        return '<button class="src-filter-btn" onclick="filterSources(\'' + s.name.replace(/'/g, "\\'") + '\',this)">' + s.name + '</button>';
+      }).join('');
+  }
+
+  // Hide Research tab if no dorks configured
+  var searchBtn = document.getElementById('tab-btn-search');
+  if (searchBtn && (!cfg.searchDorks || cfg.searchDorks.length === 0)) {
+    searchBtn.style.display = 'none';
+  }
+
+  // Modal backdrop click to close
+  ['srcModal','addModal','editTaskModal','viewNoteModal','noteModal'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function (e) {
+      if (e.target === el) el.classList.remove('open');
+    });
+  });
+
+  // Close deadline edit panels on outside click
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.dl-edit-panel.open').forEach(function (p) { p.classList.remove('open'); });
+  });
+
+  renderDorkButtons();
+  loadMembers(function () { loadTasks(); });
+  loadDeadlines();
+});
+
+// ── SEED SECTION TASKS (client side) ─────────────────────────
+function seedSectionTasks() {
+  var btn = document.getElementById('seed-btn');
+  btn.textContent = 'Seeding...'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none';
+  google.script.run
+    .withSuccessHandler(function (result) {
+      btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+      btn.textContent = result.error ? 'Seed failed' : result.created > 0 ? 'Created ' + result.created + ' tasks' : 'All up to date';
+      if (!result.error && result.created > 0) loadTasks();
+      setTimeout(function () { btn.textContent = 'Seed section tasks'; }, 3000);
+    })
+    .withFailureHandler(function (err) {
+      btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+      btn.textContent = 'Seed failed';
+      setTimeout(function () { btn.textContent = 'Seed section tasks'; }, 3000);
+      console.error(err);
+    })
+    .seedSectionTasks();
+}
+
+// ── SEED REPORT DOCS (client side) ───────────────────────────
+function triggerSeedDocs() {
+  var btn = document.getElementById('seed-docs-btn');
+  btn.textContent = 'Creating...'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none';
+  google.script.run
+    .withSuccessHandler(function (result) {
+      btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+      btn.textContent = result.success ? 'Done — ' + result.created + ' created' : 'Failed';
+      if (result.success) loadReportSections();
+      setTimeout(function () { btn.textContent = 'Seed report docs'; }, 3000);
+    })
+    .withFailureHandler(function (err) {
+      btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+      btn.textContent = 'Failed';
+      setTimeout(function () { btn.textContent = 'Seed report docs'; }, 3000);
+      console.error(err);
+    })
+    .seedReportDocs();
+}
+
+// ── REFERENCE SCANNER (client side) ──────────────────────────
+function triggerScanner() {
+  var docId = document.getElementById('scan-doc-id').value.trim();
+  var out   = document.getElementById('scan-results');
+  if (!docId) { out.innerHTML = '<span style="color:var(--pri-high)">Please enter a Doc ID or tag.</span>'; return; }
+  out.innerHTML = 'Scanning...';
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (!r.success) { out.innerHTML = '<span style="color:var(--pri-high)">Error: ' + r.message + '</span>'; return; }
+      if (r.data.length === 0) { out.innerHTML = 'No references found.'; return; }
+      out.innerHTML = '<strong style="color:#4caf76">Found ' + r.data.length + ' references:</strong><ul style="padding-left:20px;color:var(--text);margin-top:8px">' +
+        r.data.map(function (ref) { return '<li style="margin-bottom:6px">' + ref + '</li>'; }).join('') + '</ul>';
+    })
+    .withFailureHandler(function (err) { out.innerHTML = '<span style="color:var(--pri-high)">Failed: ' + err.message + '</span>'; })
+    .scanDocReferences(docId);
+}
+
+// ── AUDIT FILTER (client side) ───────────────────────────────
+function filterAuditLog(query) {
+  var q = query.toLowerCase();
+  document.querySelectorAll('.audit-table tbody tr').forEach(function (row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
