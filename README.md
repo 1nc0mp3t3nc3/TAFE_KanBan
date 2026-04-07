@@ -16,15 +16,15 @@ PIN-based group authentication with 12-hour session tokens
 
 
 File Structure
-Code.gs          — Backend (Google Apps Script)
-config.js        — Project configuration (THE ONLY FILE YOU EDIT)
-index.html       — Main board UI
-app.js           — Client-side application logic
-styles.css.html  — Stylesheet
-login.html       — PIN login page
+Code.gs          - Backend (Google Apps Script)
+config.js        - Project configuration (THE ONLY FILE YOU EDIT)
+index.html       - Main board UI
+app.js           - Client-side application logic
+styles.css.html  - Stylesheet
+login.html       - PIN login page
 
 Setup for a New Project
-Step 1 — Create your Google resources
+Step 1 - Create your Google resources
 
 Create a new Google Sheet (this is your database)
 Create a Google Drive folder for AT submissions (shared with your group)
@@ -55,14 +55,14 @@ login.html → New file: login.html
 
 Note: In Apps Script, HTML files must use the .html extension. When creating config.js and app.js, create them as HTML files but name them config.js and app.js — Apps Script will accept them.
 
-Step 3 — Configure Code.gs
+Step 3 - Configure Code.gs
 At the top of Code.gs, set your three IDs:
 javascriptconst SPREADSHEET_ID        = 'YOUR_SPREADSHEET_ID_HERE';
-const SUBMISSIONS_FOLDER_ID = 'YOUR_SUBMISSIONS_FOLDER_ID_HERE';
-const DOCUMENTS_FOLDER_ID   = 'YOUR_DOCUMENTS_FOLDER_ID_HERE';
+const SUBMISSIONS_FOLDER_ID           = 'YOUR_SUBMISSIONS_FOLDER_ID_HERE';
+const DOCUMENTS_FOLDER_ID             = 'YOUR_DOCUMENTS_FOLDER_ID_HERE';
 Set your group PIN hash. Default is 1234. To change it:
 
-Go to https://emn178.github.io/online-tools/sha256.html
+Go to https://emn178.github.io/online-tools/sha256.html or any other hashing tool and create a SHA256 hash
 Type your PIN and copy the hash
 Replace the value of SERVER_PIN_HASH
 
@@ -77,7 +77,7 @@ num: three-digit prefix used to match Google Doc filenames
 name: must exactly match the name values in config.js
 target: word count target (use 0 for sections with no limit)
 
-Step 4 — Configure config.js
+Step 4 - Configure config.js
 Edit config.js to match your project. This is the only file you should need to touch for a new deployment:
 javascriptconst CLIENT_CONFIG = {
   projectName:      'CYB801 AT3',
@@ -104,7 +104,7 @@ javascriptconst CLIENT_CONFIG = {
 Important: The name values in sections[] must exactly match the name values in SECTION_CONFIG in Code.gs. They are used as task section labels and for matching word counts.
 colorIdx maps to CSS colour variables --sec-0 through --sec-9:
 IndexColour0Blue1Purple2Green3Amber4Red5Grey6Pink7Light blue8Cyan9Orange
-Step 5 — Initialise the spreadsheet
+Step 5 - Initialise the spreadsheet
 
 In Apps Script, select setupSpreadsheet from the function dropdown
 Click Run
@@ -112,7 +112,7 @@ Approve any permission requests
 Check the execution log — you should see each sheet created with headers
 
 This is safe to re-run. It will not overwrite existing data.
-Step 6 — Deploy as a Web App
+Step 6 - Deploy as a Web App
 
 Click Deploy > New deployment
 Click the gear icon next to "Select type" and choose Web app
@@ -123,12 +123,12 @@ Who has access: Anyone with a Google account
 
 
 Click Deploy
-Copy the Web App URL — this is your board URL
+Copy the Web App URL - this is your board URL
 
 
 Every time you make changes to the code, you must create a new deployment for them to take effect. Editing existing deployments does not update the running code.
 
-Step 7 — First run
+Step 7 - First run
 
 Open the Web App URL
 Enter your group PIN (default: 1234)
@@ -235,5 +235,6 @@ setupSpreadsheet() extracted from nested position, now a top-level function
 
 
 License
-MIT License. Free to use, modify, and distribute for educational purposes.
+Free to use, modify, and distribute for educational and/or personal purposes.
+Also provided without warranty, but I will make best effort to tidy up bugs whenever I have time
 Developed by Geoff Welsford (@1nc0mp3t3nc3) 
